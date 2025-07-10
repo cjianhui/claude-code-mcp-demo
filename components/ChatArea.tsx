@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import config from "@/config";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -14,6 +15,9 @@ import {
   BookOpenText,
   ChevronDown,
   Send,
+  Zap,
+  Star,
+  Clock,
 } from "lucide-react";
 import "highlight.js/styles/atom-one-dark.css";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -25,6 +29,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const TypedText = ({ text = "", delay = 5 }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -194,6 +204,12 @@ const MessageContent = ({
 type Model = {
   id: string;
   name: string;
+  description: string;
+  capabilities: {
+    speed: 'fast' | 'medium' | 'slow';
+    quality: 'high' | 'medium' | 'standard';
+    context: string;
+  };
 };
 
 interface Message {
@@ -237,28 +253,67 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
       )}
     </div>
     <div className="flex space-x-2 w-full sm:w-auto">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-grow text-muted-foreground sm:flex-grow-0"
-          >
-            {models.find((m) => m.id === selectedModel)?.name}
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
+      <TooltipProvider>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-grow text-muted-foreground sm:flex-grow-0"
+                >
+                  {models.find((m) => m.id === selectedModel)?.name}
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="space-y-1">
+                <p className="font-medium">{models.find((m) => m.id === selectedModel)?.description}</p>
+                <div className="flex space-x-2 text-xs">
+                  <span>Speed: {models.find((m) => m.id === selectedModel)?.capabilities.speed}</span>
+                  <span>Quality: {models.find((m) => m.id === selectedModel)?.capabilities.quality}</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        <DropdownMenuContent className="w-80">
           {models.map((model) => (
             <DropdownMenuItem
               key={model.id}
               onSelect={() => setSelectedModel(model.id)}
+              className="flex flex-col items-start space-y-2 p-4 cursor-pointer hover:bg-accent"
             >
-              {model.name}
+              <div className="flex items-center justify-between w-full">
+                <span className="font-medium">{model.name}</span>
+                <div className="flex space-x-1">
+                  <Badge 
+                    variant={model.capabilities.speed === 'fast' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    <Zap className="w-3 h-3 mr-1" />
+                    {model.capabilities.speed}
+                  </Badge>
+                  <Badge 
+                    variant={model.capabilities.quality === 'high' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    <Star className="w-3 h-3 mr-1" />
+                    {model.capabilities.quality}
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">{model.description}</p>
+              <div className="text-xs text-muted-foreground flex items-center">
+                <Clock className="w-3 h-3 mr-1" />
+                Context: {model.capabilities.context}
+              </div>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </TooltipProvider>
     </div>
   </div>
 );
@@ -268,14 +323,52 @@ function ChatArea() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showHeader, setShowHeader] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("claude-3-5-sonnet-20240620");
+  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-20250514");
   const [showAvatar, setShowAvatar] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const models: Model[] = [
-    { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku" },
-    { id: "claude-3-5-sonnet-20240620", name: "Claude 3.5 Sonnet" },
+    { 
+      id: "claude-sonnet-4-20250514", 
+      name: "Claude 4 Sonnet",
+      description: "Most capable model with superior reasoning and analysis",
+      capabilities: {
+        speed: 'medium',
+        quality: 'high',
+        context: '200k tokens'
+      }
+    },
+    { 
+      id: "claude-3-5-haiku-20241022", 
+      name: "Claude 3.5 Haiku",
+      description: "Fastest model optimized for quick responses",
+      capabilities: {
+        speed: 'fast',
+        quality: 'high',
+        context: '200k tokens'
+      }
+    },
+    { 
+      id: "claude-3-5-sonnet-20240620", 
+      name: "Claude 3.5 Sonnet",
+      description: "Balanced model with strong performance across tasks",
+      capabilities: {
+        speed: 'medium',
+        quality: 'high',
+        context: '200k tokens'
+      }
+    },
+    { 
+      id: "claude-3-haiku-20240307", 
+      name: "Claude 3 Haiku",
+      description: "Legacy fast model for basic tasks",
+      capabilities: {
+        speed: 'fast',
+        quality: 'medium',
+        context: '200k tokens'
+      }
+    },
   ];
 
   const scrollToBottom = () => {
